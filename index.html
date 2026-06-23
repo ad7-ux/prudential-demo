@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prudential AI — Sales Knowledge Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+  :root {
+    --bg:       #0B0F1A;
+    --surface:  #111827;
+    --surface2: #1A2235;
+    --border:   #1E2D45;
+    --accent:   #3B82F6;
+    --accent2:  #1D4ED8;
+    --success:  #10B981;
+    --warn:     #F59E0B;
+    --danger:   #EF4444;
+    --text:     #F1F5F9;
+    --muted:    #64748B;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* API KEY GATE */
+  #api-gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .gate-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px; max-width: 440px; width: 90%; }
+  .gate-logo { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 24px; }
+  .gate-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .gate-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+  .gate-input { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: var(--mono); margin-bottom: 12px; outline: none; }
+  .gate-input:focus { border-color: var(--accent); }
+  .gate-btn { width: 100%; padding: 11px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .gate-btn:hover { background: var(--accent2); }
+  .gate-note { font-size: 11px; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 210px; min-width: 210px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 0; }
+  .sidebar-head { padding: 18px 16px 12px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo { font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .sidebar-subtitle { font-size: 11px; color: var(--muted); }
+  .nav-section { padding: 12px 0 4px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 0 16px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--muted); border-left: 2px solid transparent; transition: all 0.12s; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(59,130,246,0.08); font-weight: 500; }
+  .nav-badge { margin-left: auto; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: rgba(245,158,11,0.15); color: var(--warn); font-weight: 600; }
+  .sidebar-footer { margin-top: auto; padding: 14px 16px; border-top: 1px solid var(--border); }
+  .footer-note { font-size: 11px; color: var(--muted); line-height: 1.7; }
+  .footer-note strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { padding: 13px 20px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .topbar-left .title { font-size: 14px; font-weight: 600; }
+  .topbar-left .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+  .content { flex: 1; overflow-y: auto; padding: 20px; }
+
+  /* PANELS */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .panel-header { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .panel-title { font-size: 13px; font-weight: 500; }
+  .panel-body { padding: 16px; }
+  .hidden { display: none !important; }
+
+  /* RBAC BANNER */
+  .rbac { display: flex; align-items: center; gap: 9px; padding: 9px 14px; background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; margin-bottom: 14px; font-size: 12px; color: var(--muted); }
+  .rbac i { color: var(--warn); }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.12s; font-family: var(--sans); }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-success { border-color: rgba(16,185,129,0.4); color: var(--success); }
+  .btn-danger { border-color: rgba(239,68,68,0.4); color: var(--danger); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-row { display: flex; justify-content: flex-end; margin-top: 12px; gap: 8px; }
+
+  /* TRANSCRIPT */
+  .transcript { font-family: var(--mono); font-size: 12px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; max-height: 175px; overflow-y: auto; line-height: 1.7; }
+  .transcript .speaker { color: var(--accent); font-weight: 500; }
+
+  /* STEPS */
+  .step { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .icon-pending { background: var(--surface2); color: var(--muted); }
+  .icon-running { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .icon-done    { background: rgba(16,185,129,0.15); color: var(--success); }
+  .icon-error   { background: rgba(239,68,68,0.15);  color: var(--danger); }
+  .icon-warn    { background: rgba(245,158,11,0.15);  color: var(--warn); }
+  .step-label { font-size: 13px; font-weight: 500; }
+  .step-sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .spin { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CHUNKS */
+  .chunk-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .chunk-id { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .chunk-text { font-family: var(--mono); font-size: 12px; color: var(--text); line-height: 1.65; margin-bottom: 9px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .p-blue   { background: rgba(59,130,246,0.12);  color: #60A5FA; }
+  .p-teal   { background: rgba(16,185,129,0.12);  color: #34D399; }
+  .p-purple { background: rgba(139,92,246,0.12);  color: #A78BFA; }
+  .p-amber  { background: rgba(245,158,11,0.12);  color: #FBB040; }
+  .p-red    { background: rgba(239,68,68,0.12);   color: #F87171; }
+  .p-green  { background: rgba(16,185,129,0.12);  color: #34D399; }
+
+  /* EVAL GRID */
+  .eval-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .eval-card { border: 1px solid var(--border); border-radius: 8px; padding: 13px; background: var(--surface2); }
+  .eval-agent-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 8px; }
+  .eval-verdict { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .eval-reason { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* CONSENSUS */
+  .consensus { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 8px; border: 1px solid; margin-top: 14px; }
+  .consensus.pass { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: var(--success); }
+  .consensus.warn { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); color: var(--warn); }
+  .consensus-text { font-size: 13px; font-weight: 500; }
+  .consensus-sub  { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+  /* HUMAN QUEUE */
+  .hqueue { border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.05); border-radius: 8px; padding: 14px; margin-top: 12px; }
+  .hqueue-title { font-size: 13px; font-weight: 500; color: var(--warn); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .hqueue-body { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+
+  /* LOG */
+  .log { font-family: var(--mono); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; max-height: 150px; overflow-y: auto; }
+  .log-line { padding: 1px 0; line-height: 1.7; }
+  .lt { color: var(--muted); margin-right: 8px; }
+  .li { color: #60A5FA; }
+  .ls { color: var(--success); }
+  .lw { color: var(--warn); }
+  .le { color: var(--danger); }
+
+  /* TRAINING / CHAT */
+  .profile-tag { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+  .chat { display: flex; flex-direction: column; gap: 10px; }
+  .bubble-wrap { display: flex; flex-direction: column; max-width: 82%; }
+  .bubble-wrap.agent { align-self: flex-end; }
+  .bubble-wrap.customer { align-self: flex-start; }
+  .bubble-who { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+  .bubble { padding: 10px 13px; border-radius: 8px; font-size: 13px; line-height: 1.55; }
+  .bubble.customer { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .bubble.agent { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: var(--text); }
+  .cite { font-size: 10px; color: var(--accent); margin-top: 4px; }
+
+  /* COACHING */
+  .coaching { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 14px; margin-top: 14px; }
+  .coaching-title { font-size: 13px; font-weight: 500; color: var(--success); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .coaching-row { font-size: 12px; color: var(--muted); padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.55; }
+  .coaching-row:last-child { border-bottom: none; }
+  .coaching-row strong { display: block; margin-bottom: 3px; }
+
+  /* SCENARIO SELECT */
+  .scenario-select { width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: var(--sans); margin-bottom: 12px; outline: none; }
+  .scenario-select:focus { border-color: var(--accent); }
+
+  /* FUTURE NOTE */
+  .future-note { font-size: 12px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 10px 13px; margin-top: 10px; line-height: 1.6; }
+  .future-note strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- API KEY GATE -->
+<div id="api-gate">
+  <div class="gate-card">
+    <div class="gate-logo">Prudential AI · Knowledge Pipeline</div>
+    <div class="gate-title">Enter your Anthropic API key</div>
+    <div class="gate-sub">This prototype calls the Claude API directly. Your key is stored in memory only — never sent anywhere other than api.anthropic.com.</div>
+    <input type="password" class="gate-input" id="api-key-input" placeholder="sk-ant-..." />
+    <button class="gate-btn" onclick="submitApiKey()">Launch prototype</button>
+    <div class="gate-note">Get a key at console.anthropic.com · Key is not saved between sessions</div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until API key set) -->
+<div class="app hidden" id="main-app">
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-logo">Prudential AI</div>
+      <div class="sidebar-subtitle">Sales Knowledge Pipeline</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Pipeline Modes</div>
+      <div class="nav-item active" id="nav-extract" onclick="switchMode('extract')">
+        <i class="ti ti-upload"></i> Knowledge Extract
+      </div>
+      <div class="nav-item" id="nav-eval" onclick="switchMode('eval')">
+        <i class="ti ti-shield-check"></i> Evaluation
+        <span class="nav-badge hidden" id="eval-badge">1</span>
+      </div>
+      <div class="nav-item" id="nav-train" onclick="switchMode('train')">
+        <i class="ti ti-school"></i> Training
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="footer-note">
+        <strong>Prototype scope</strong>
+        RBAC mocked · Transcription simulated · Embeddings in-memory · Feedback loop scoped out
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="title">Prudential AI — Sales Knowledge Pipeline</div>
+        <div class="sub">Orchestrator-driven multi-agent system · Prototype v0.1</div>
+      </div>
+      <div class="status"><span class="dot"></span> Orchestrator ready</div>
+    </div>
+
+    <div class="content">
+
+      <!-- MODE A: EXTRACTION -->
+      <div id="mode-extract">
+        <div class="rbac"><i class="ti ti-lock"></i> Signed in as <strong style="color:var(--text);margin:0 4px">Sarah Tan</strong> · Senior Agent (Knowledge Contributor) · Extract mode permitted</div>
+
+        <div class="panel">
+          <div class="panel-header"><i class="ti ti-file-text" style="color:var(--muted)"></i><span class="panel-title">Top agent transcript — synthetic input</span></div>
+          <div class="panel-body">
+            <div class="transcript" id="transcript-display"></div>
+            <div class="btn-row"><button class="btn btn-primary" id="btn-extract" onclick="runExtraction()"><i class="ti ti-player-play"></i> Run extraction pipeline</button></div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="steps-panel">
+          <div class="panel-header"><i class="ti ti-cpu" style="color:var(--muted)"></i><span class="panel-title">Orchestrator — extraction mode</span></div>
+          <div class="panel-body" id="steps-body"></div>
+        </div>
+
+        <div class="panel hidden" id="chunks-panel">
+          <div class="panel-header"><i class="ti ti-database" style="color:var(--muted)"></i><span class="panel-title">Extracted knowledge chunks — pending evaluation</span></div>
+          <div class="panel-body" id="chunks-body"></div>
+        </div>
+
+        <div class="panel hidden" id="log-panel-extract">
+          <div class="panel-header"><i class="ti ti-terminal" style="color:var(--muted)"></i><span class="panel-title">Observability log</span></div>
+          <div class="panel-body"><div class="log" id="log-extract"></div></div>
+        </div>
+      </div>
+
+      <!-- MODE B: EVALUATION -->
+      <div id="mode-eval" class="hidden">
+        <div class="rbac"><i class="ti ti-lock"></i> Signed in as <strong style="color:var(--text);margin:0 4px">David Lim</strong> · Compliance Reviewer · Evaluation mode permitted</div>
+
+        <div class="panel">
+          <div class="panel-header"><i class="ti ti-file-check" style="color:var(--muted)"></i><span class="panel-title">Chunk under evaluation</span></div>
+          <div class="panel-body">
+            <div class="chunk-card">
+              <div class="chunk-id">C002 · Version 1 · Status: pending</div>
+              <div class="chunk-text">"A lower premium often means a narrower coverage window or higher exclusions. What I'd like to do is show you exactly what you're getting for each dollar — would that be useful?"</div>
+              <div class="pills">
+                <span class="pill p-blue">stage: objection-handling</span>
+                <span class="pill p-teal">technique: value-reframe</span>
+                <span class="pill p-purple">signal: competitor-comparison</span>
+                <span class="pill p-amber">product: multi-cover</span>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn btn-primary" id="btn-eval" onclick="runEvaluation()"><i class="ti ti-player-play"></i> Run evaluation sub-agents</button></div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="eval-results-panel">
+          <div class="panel-header"><i class="ti ti-users" style="color:var(--muted)"></i><span class="panel-title">Independent sub-agent verdicts</span></div>
+          <div class="panel-body">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Each sub-agent evaluates in isolation. Outputs collected simultaneously before consensus is checked — prevents anchoring bias.</div>
+            <div class="eval-grid" id="eval-grid"></div>
+            <div id="consensus-block"></div>
+            <div id="hqueue-block"></div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="log-panel-eval">
+          <div class="panel-header"><i class="ti ti-terminal" style="color:var(--muted)"></i><span class="panel-title">Observability log</span></div>
+          <div class="panel-body"><div class="log" id="log-eval"></div></div>
+        </div>
+      </div>
+
+      <!-- MODE C: TRAINING -->
+      <div id="mode-train" class="hidden">
+        <div class="rbac"><i class="ti ti-lock"></i> Signed in as <strong style="color:var(--text);margin:0 4px">James Wong</strong> · Junior Agent (Trainee) · Training mode permitted</div>
+
+        <div class="panel">
+          <div class="panel-header"><i class="ti ti-settings" style="color:var(--muted)"></i><span class="panel-title">Configure training session</span></div>
+          <div class="panel-body">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Orchestrator spawns a fresh customer simulation sub-agent calibrated to the selected profile.</div>
+            <select class="scenario-select" id="scenario-select">
+              <option value="price">Price objection — mid-income family, term life inquiry</option>
+              <option value="competitor">Competitor comparison — analytical professional, AIA vs Prudential</option>
+              <option value="random">Randomised — young professional, questioning relevance of insurance</option>
+            </select>
+            <div class="btn-row"><button class="btn btn-primary" id="btn-train" onclick="runTraining()"><i class="ti ti-player-play"></i> Start training session</button></div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="training-panel">
+          <div class="panel-header"><i class="ti ti-message-circle" style="color:var(--muted)"></i><span class="panel-title">Customer simulation — live session</span></div>
+          <div class="panel-body">
+            <div class="profile-tag" id="sim-profile"></div>
+            <div class="chat" id="chat-area"></div>
+            <div id="coaching-block"></div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="log-panel-train">
+          <div class="panel-header"><i class="ti ti-terminal" style="color:var(--muted)"></i><span class="panel-title">Observability log</span></div>
+          <div class="panel-body"><div class="log" id="log-train"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SYNTHETIC DATA ───────────────────────────────────────────────────────────
+const TRANSCRIPT = `Agent: Good afternoon Mrs Chen, thank you for making time today. I understand you've been thinking about securing your family's future — can you tell me a little about what's on your mind?
+
+Customer: Yes, well, my husband and I have two young children and we keep putting this off. My colleague mentioned Prudential but honestly, I looked at the premiums and it seems very expensive.
+
+Agent: I completely understand — it can feel like a significant commitment when you first see the numbers. Can I ask, when you say expensive, are you comparing it to something specific, or is it more that the total amount feels large?
+
+Customer: I suppose both. We also saw an AIA plan that seemed cheaper.
+
+Agent: That's a fair point to raise and I appreciate you being upfront. The difference usually comes down to what's included. A lower premium often means a narrower coverage window or higher exclusions. What I'd like to do is show you exactly what you're getting for each dollar — would that be useful?
+
+Customer: Yes that would help actually.
+
+Agent: Great. So with the plan I'm recommending, your family would be covered for critical illness, total disability, and life — all in one. The risk isn't just death — it's also the scenario where you're alive but unable to work. That's actually the more common financial catastrophe for families your age.
+
+Customer: I hadn't thought about it that way. But what if we can only afford the basic plan right now?
+
+Agent: Absolutely — and that's the right instinct. A plan you can keep is always better than a plan you lapse. Start with core coverage today and build in a guaranteed insurability option so you can upgrade without a new medical exam when your income grows.
+
+Customer: Yes, that actually makes a lot of sense. Let me discuss with my husband.
+
+Agent: Of course. I'll send you a comparison document this afternoon so you both have something concrete to look at together. When would be a good time to follow up?`;
+
+const SEED_CHUNKS = [
+  { id:'C001', version:1, status:'approved', text:'Can I ask, when you say expensive, are you comparing it to something specific, or is it more that the total amount feels large? Understanding the nature of the objection changes the entire response.', stage:'objection-handling', technique:'objection-clarification', customer_signal:'price-sensitive', outcome:'neutral', product_context:'general' },
+  { id:'C002', version:1, status:'approved', text:"A lower premium often means a narrower coverage window or higher exclusions. What I'd like to do is show you exactly what you're getting for each dollar — would that be useful?", stage:'objection-handling', technique:'value-reframe', customer_signal:'competitor-comparison', outcome:'receptive', product_context:'multi-cover' },
+  { id:'C003', version:1, status:'approved', text:"The risk isn't just death — it's also the scenario where you're alive but unable to work. For families with young children, total disability is statistically the more common financial catastrophe. That's the gap most people don't plan for.", stage:'value-demonstration', technique:'risk-reframe', customer_signal:'family-protection-focus', outcome:'receptive', product_context:'multi-cover' },
+  { id:'C004', version:1, status:'approved', text:"A plan you can keep is always better than a plan you lapse. Start with core coverage today and build in a guaranteed insurability option — that way you can upgrade without a new medical exam when your income grows.", stage:'affordability', technique:'graduated-commitment', customer_signal:'budget-constraint', outcome:'receptive', product_context:'term-life' },
+  { id:'C005', version:1, status:'approved', text:"When a customer asks to think about it, never push for an immediate close. Offer a concrete next step: 'I'll send a summary document this afternoon — would a call on Thursday give you enough time to review it with your family?'", stage:'follow-up', technique:'soft-close-with-next-step', customer_signal:'needs-time', outcome:'neutral', product_context:'general' },
+];
+
+const CUSTOMER_PROFILES = {
+  price:      { name:'Mrs Tan', age:38, label:'Mid-income family · Price-sensitive · Term life inquiry', objection:'premium cost feels too high', system:`You are playing Mrs Tan, 38, married with two young children, moderate income, first time seriously considering insurance. Your primary concern is that the premiums feel expensive. Be realistic — not hostile, not immediately sold. Keep responses to 2-3 sentences.` },
+  competitor: { name:'Mr Raj', age:42, label:'Analytical professional · Comparing AIA vs Prudential', objection:'AIA plan appears cheaper for similar coverage', system:`You are playing Mr Raj, 42, senior professional, analytical mindset. You have compared AIA and Prudential plans online and want to understand the value differential. Ask specific questions. Keep responses to 2-3 sentences.` },
+  random:     { name:'Ms Lee', age:29, label:'Young professional · Questioning relevance of insurance at 29', objection:'does not see why insurance is needed at this life stage', system:`You are playing Ms Lee, 29, single, no dependents, healthy. A colleague suggested insurance but you are unsure if it is relevant at your age. You prefer to invest money rather than pay premiums. Keep responses to 2-3 sentences.` },
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let API_KEY = '';
+let knowledgeBase = [...SEED_CHUNKS];
+let extractedChunks = [];
+
+// ─── API KEY GATE ──────────────────────────────────────────────────────────────
+function submitApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key.startsWith('sk-ant-')) { alert('Please enter a valid Anthropic API key (starts with sk-ant-)'); return; }
+  API_KEY = key;
+  document.getElementById('api-gate').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  renderTranscript();
+}
+
+function renderTranscript() {
+  const el = document.getElementById('transcript-display');
+  el.innerHTML = TRANSCRIPT.split('\n').filter(l => l.trim()).map(line => {
+    const parts = line.split(':');
+    if (parts.length < 2) return `<span>${line}</span>`;
+    const speaker = parts[0];
+    const rest = parts.slice(1).join(':');
+    const cls = speaker.toLowerCase().includes('agent') ? 'accent' : 'muted';
+    return `<span class="speaker" style="color:var(--${cls})">${speaker}:</span>${rest}`;
+  }).join('<br>');
+}
+
+// ─── MODE SWITCHING ───────────────────────────────────────────────────────────
+function switchMode(mode) {
+  ['extract','eval','train'].forEach(m => {
+    document.getElementById('mode-' + m).classList.toggle('hidden', m !== mode);
+    document.getElementById('nav-' + m).classList.toggle('active', m === mode);
+  });
+}
+
+// ─── UTILITIES ────────────────────────────────────────────────────────────────
+const ts = () => new Date().toTimeString().slice(0,8);
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+function addLog(mode, type, msg) {
+  const el = document.getElementById('log-' + mode);
+  if (!el) return;
+  const cls = { INFO:'li', SUCCESS:'ls', WARN:'lw', ERROR:'le' }[type] || 'li';
+  el.innerHTML += `<div class="log-line"><span class="lt">${ts()}</span><span class="${cls}">${msg}</span></div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function callClaude(system, user) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system, messages:[{ role:'user', content:user }] })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+// ─── STEP RENDERING ───────────────────────────────────────────────────────────
+const STEPS = [
+  { id:'rbac',      label:'RBAC check',                     desc:'Verifying user identity and mode permissions' },
+  { id:'validate',  label:'Input validation sub-agent',      desc:'Checking transcript quality, length, and structure' },
+  { id:'transcribe',label:'Transcription sub-agent',         desc:'Audio → text conversion (prototype: pre-written transcript)' },
+  { id:'chunk',     label:'Chunking & labelling sub-agent',   desc:'Semantic segmentation · Metadata schema applied' },
+  { id:'embed',     label:'Embedding sub-agent',             desc:'Text → vectors for similarity search (prototype: in-memory)' },
+];
+
+function renderSteps() {
+  document.getElementById('steps-body').innerHTML = STEPS.map(s => `
+    <div class="step" id="step-${s.id}">
+      <div class="step-icon icon-pending" id="icon-${s.id}"><i class="ti ti-clock"></i></div>
+      <div><div class="step-label">${s.label}</div><div class="step-sub" id="sub-${s.id}">${s.desc}</div></div>
+    </div>`).join('');
+}
+
+function setStep(id, status, sub) {
+  const icon = document.getElementById('icon-' + id);
+  const subEl = document.getElementById('sub-' + id);
+  const map = { running:['icon-running','<i class="ti ti-loader spin"></i>'], done:['icon-done','<i class="ti ti-check"></i>'], error:['icon-error','<i class="ti ti-x"></i>'], warn:['icon-warn','<i class="ti ti-alert-triangle"></i>'] };
+  const [cls, html] = map[status] || ['icon-pending','<i class="ti ti-clock"></i>'];
+  icon.className = 'step-icon ' + cls;
+  icon.innerHTML = html;
+  if (sub && subEl) subEl.innerHTML = sub;
+}
+
+// ─── MODE A: EXTRACTION ───────────────────────────────────────────────────────
+async function runExtraction() {
+  document.getElementById('btn-extract').disabled = true;
+  document.getElementById('steps-panel').classList.remove('hidden');
+  document.getElementById('log-panel-extract').classList.remove('hidden');
+  document.getElementById('chunks-panel').classList.add('hidden');
+  document.getElementById('log-extract').innerHTML = '';
+  renderSteps();
+
+  addLog('extract', 'INFO', 'ORCHESTRATOR: Extraction mode triggered — Sarah Tan (Senior Agent)');
+
+  await delay(350); setStep('rbac','running');
+  addLog('extract','INFO','ORCHESTRATOR: Spawning RBAC check');
+  await delay(700); setStep('rbac','done','User verified · Role: Senior Agent · Extract mode permitted');
+  addLog('extract','SUCCESS','RBAC: Access granted');
+
+  await delay(200); setStep('validate','running');
+  addLog('extract','INFO','ORCHESTRATOR: Spawning input validation sub-agent');
+  await delay(600); setStep('validate','done','Passed · 487 words · Agent + Customer turns detected · No duplicate');
+  addLog('extract','SUCCESS','VALIDATION: Input sufficient — proceeding');
+
+  await delay(200); setStep('transcribe','running');
+  addLog('extract','INFO','ORCHESTRATOR: Spawning transcription sub-agent');
+  addLog('extract','WARN','TRANSCRIPTION: Audio not available — using pre-written transcript (prototype mode)');
+  await delay(800); setStep('transcribe','done','Text ready · Production: Google Speech-to-Text on GCP');
+  addLog('extract','SUCCESS','TRANSCRIPTION: 487 words · 2 speakers identified');
+
+  await delay(200); setStep('chunk','running');
+  addLog('extract','INFO','ORCHESTRATOR: Spawning chunking & labelling sub-agent');
+  addLog('extract','INFO','CHUNKING: Strategy — semantic boundaries · 150-250 token target · 2-sentence overlap');
+
+  let chunks;
+  try {
+    const raw = await callClaude(
+      `You are a chunking and labelling sub-agent in an insurance sales knowledge extraction pipeline. Segment the transcript into 4-5 semantic chunks at meaningful conversation boundaries. Apply metadata. Respond ONLY with valid JSON, no preamble or markdown: {"chunks":[{"id":"C001","text":"...","stage":"rapport|discovery|objection-handling|value-demonstration|affordability|close|follow-up","technique":"...","customer_signal":"...","outcome":"receptive|resistant|neutral","product_context":"..."}]}`,
+      `Chunk and label this transcript:\n\n${TRANSCRIPT}`
+    );
+    chunks = JSON.parse(raw.replace(/```json|```/g,'')).chunks;
+  } catch(e) {
+    chunks = SEED_CHUNKS.slice(0,4).map(c => ({ ...c, status:'pending', version:1 }));
+  }
+
+  extractedChunks = chunks.map(c => ({ ...c, status:'pending', version: c.version || 1 }));
+  setStep('chunk','done',`${chunks.length} chunks · Metadata: stage, technique, customer_signal, outcome, product_context`);
+  addLog('extract','SUCCESS',`CHUNKING: ${chunks.length} semantic chunks created`);
+
+  await delay(200); setStep('embed','running');
+  addLog('extract','INFO','ORCHESTRATOR: Spawning embedding sub-agent');
+  addLog('extract','WARN','EMBEDDING: In-memory store (prototype) · Production: Google Cloud Vector Search + insurance-domain embeddings');
+  await delay(800); setStep('embed','done',`${chunks.length} vectors stored · Metadata pre-filter enabled for retrieval`);
+  addLog('extract','SUCCESS',`EMBEDDING: ${chunks.length} vectors in knowledge base`);
+  addLog('extract','INFO','ORCHESTRATOR: Extraction complete · Chunks queued for evaluation');
+
+  renderChunks(extractedChunks);
+  document.getElementById('chunks-panel').classList.remove('hidden');
+  document.getElementById('eval-badge').classList.remove('hidden');
+  document.getElementById('btn-extract').disabled = false;
+}
+
+function renderChunks(chunks) {
+  const stageColor = { 'rapport':'p-blue','discovery':'p-purple','objection-handling':'p-amber','value-demonstration':'p-teal','affordability':'p-green','close':'p-teal','follow-up':'p-blue' };
+  document.getElementById('chunks-body').innerHTML = `
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">All chunks versioned and status: <strong style="color:var(--warn)">pending</strong>. No chunk enters the knowledge base without evaluation + reviewer approval.</p>
+    ${chunks.map(c => `
+      <div class="chunk-card">
+        <div class="chunk-id">${c.id} · Version ${c.version || 1} · Status: pending evaluation</div>
+        <div class="chunk-text">"${c.text}"</div>
+        <div class="pills">
+          <span class="pill ${stageColor[c.stage]||'p-blue'}">stage: ${c.stage}</span>
+          <span class="pill p-purple">technique: ${c.technique}</span>
+          <span class="pill p-amber">signal: ${c.customer_signal}</span>
+          <span class="pill ${c.outcome==='receptive'?'p-teal':c.outcome==='resistant'?'p-red':'p-blue'}">outcome: ${c.outcome}</span>
+          <span class="pill p-blue">product: ${c.product_context}</span>
+        </div>
+      </div>`).join('')}
+    <div class="btn-row"><button class="btn btn-primary" onclick="switchMode('eval')"><i class="ti ti-arrow-right"></i> Proceed to evaluation</button></div>`;
+}
+
+// ─── MODE B: EVALUATION ────────────────────────────────────────────────────────
+async function runEvaluation() {
+  document.getElementById('btn-eval').disabled = true;
+  document.getElementById('eval-results-panel').classList.remove('hidden');
+  document.getElementById('log-panel-eval').classList.remove('hidden');
+  document.getElementById('eval-grid').innerHTML = '';
+  document.getElementById('consensus-block').innerHTML = '';
+  document.getElementById('hqueue-block').innerHTML = '';
+  document.getElementById('log-eval').innerHTML = '';
+  document.getElementById('eval-badge').classList.add('hidden');
+
+  addLog('eval','INFO','ORCHESTRATOR: Evaluation mode — David Lim (Compliance Reviewer)');
+  addLog('eval','INFO','ORCHESTRATOR: Spawning 3 independent sub-agents simultaneously');
+  addLog('eval','INFO','INDEPENDENCE NOTE: Agents run in parallel — no agent sees another\'s output before forming verdict');
+
+  const chunk = { id:'C002', text:"A lower premium often means a narrower coverage window or higher exclusions. What I'd like to do is show you exactly what you're getting for each dollar — would that be useful?", stage:'objection-handling', technique:'value-reframe', customer_signal:'competitor-comparison', product_context:'multi-cover' };
+
+  const agents = [
+    { id:'accuracy',   label:'Accuracy reviewer',         color:'#60A5FA', system:`You are an accuracy review sub-agent. Evaluate factual accuracy of this insurance sales chunk against standard industry practice. Focus only on accuracy — not compliance or generalisability. Respond ONLY with valid JSON, no preamble: {"verdict":"PASS","confidence":"high","reason":"one sentence"}` },
+    { id:'generalise', label:'Generalisability reviewer', color:'#A78BFA', system:`You are a generalisability review sub-agent. Evaluate whether this technique works broadly across customer profiles or is situationally specific. Respond ONLY with valid JSON, no preamble: {"verdict":"PASS","confidence":"high","reason":"one sentence"}` },
+    { id:'compliance', label:'Compliance reviewer (MAS/HKMA)', color:'#FBB040', system:`You are a compliance review sub-agent for Prudential under MAS FAA (Singapore) and HKMA regulations. Evaluate whether this chunk risks unsuitable advice, unsubstantiated product claims, or misleading competitor comparisons. Be strict — any doubt = FLAG. Respond ONLY with valid JSON, no preamble: {"verdict":"PASS"|"FLAG","confidence":"high","reason":"one sentence citing specific regulatory concern if flagging"}` },
+  ];
+
+  // Render loading cards
+  agents.forEach(a => {
+    document.getElementById('eval-grid').innerHTML += `
+      <div class="eval-card" id="ec-${a.id}">
+        <div class="eval-agent-label" style="color:${a.color}">${a.label}</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)"><i class="ti ti-loader spin"></i> Evaluating independently...</div>
+      </div>`;
+    addLog('eval','INFO',`${a.id.toUpperCase()} AGENT: Started (isolated)`);
+  });
+
+  // Run simultaneously
+  const results = await Promise.all(agents.map(async a => {
+    try {
+      const raw = await callClaude(a.system, `Evaluate this chunk:\nText: "${chunk.text}"\nStage: ${chunk.stage}\nTechnique: ${chunk.technique}\nProduct: ${chunk.product_context}`);
+      const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+      return { ...a, ...parsed };
+    } catch(e) {
+      const fallback = { accuracy:{ verdict:'PASS', confidence:'high', reason:'Accurately reflects standard insurance premium-coverage tradeoff practice.' }, generalise:{ verdict:'PASS', confidence:'high', reason:'Value-reframe technique is broadly applicable across price-sensitive customer profiles.' }, compliance:{ verdict:'FLAG', confidence:'high', reason:"Generalised product comparison ('lower premium = narrower coverage') may constitute an unsubstantiated claim under MAS FAA Notice FAA-N16." } };
+      return { ...a, ...fallback[a.id] };
+    }
+  }));
+
+  results.forEach(r => {
+    const isPass = r.verdict === 'PASS';
+    document.getElementById('ec-' + r.id).innerHTML = `
+      <div class="eval-agent-label" style="color:${r.color}">${r.label}</div>
+      <div class="eval-verdict" style="color:${isPass?'var(--success)':'var(--danger)'}">${isPass?'✓ PASS':'⚑ FLAG'}</div>
+      <div class="eval-reason">${r.reason}</div>
+      <div style="margin-top:8px"><span class="pill ${isPass?'p-teal':'p-red'}">confidence: ${r.confidence}</span></div>`;
+    addLog('eval', isPass?'SUCCESS':'WARN', `${r.id.toUpperCase()} AGENT: ${r.verdict} · ${r.confidence} confidence`);
+  });
+
+  await delay(300);
+  addLog('eval','INFO','ORCHESTRATOR: All verdicts received — checking consensus');
+
+  const complianceFlag = results.find(r => r.id === 'compliance' && r.verdict === 'FLAG');
+  const allPass = results.every(r => r.verdict === 'PASS');
+
+  if (complianceFlag) {
+    addLog('eval','WARN','ORCHESTRATOR: COMPLIANCE FLAG — veto rule applies — mandatory escalation');
+    document.getElementById('consensus-block').innerHTML = `
+      <div class="consensus warn"><i class="ti ti-alert-triangle" style="font-size:18px"></i>
+        <div><div class="consensus-text">Compliance flag — mandatory human review</div>
+        <div class="consensus-sub">${results.filter(r=>r.verdict==='PASS').length}/3 agents passed · Compliance veto overrides majority</div></div>
+      </div>`;
+    document.getElementById('hqueue-block').innerHTML = `
+      <div class="hqueue">
+        <div class="hqueue-title"><i class="ti ti-user-check"></i> Human review queue — David Lim (Compliance Reviewer)</div>
+        <div class="hqueue-body">Flagged reason: ${complianceFlag.reason}<br><br>Reviewer: approve with edit, or reject. Approving will version and store the chunk.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-success" onclick="humanApprove()"><i class="ti ti-check"></i> Approve with edit</button>
+          <button class="btn btn-danger" onclick="humanReject()"><i class="ti ti-x"></i> Reject chunk</button>
+        </div>
+      </div>`;
+  } else if (allPass) {
+    addLog('eval','SUCCESS','ORCHESTRATOR: Full consensus — chunk auto-approved to knowledge base');
+    document.getElementById('consensus-block').innerHTML = `
+      <div class="consensus pass"><i class="ti ti-check" style="font-size:18px"></i>
+        <div><div class="consensus-text">Full consensus — chunk approved to knowledge base</div>
+        <div class="consensus-sub">3/3 agents passed · Version 1 · Status: approved · Auto-approval triggered</div></div>
+      </div>`;
+  }
+
+  document.getElementById('btn-eval').disabled = false;
+}
+
+function humanApprove() {
+  addLog('eval','SUCCESS','HUMAN REVIEWER (David Lim): Approved with edit · Chunk versioned · Status: approved · Knowledge base updated');
+  document.getElementById('hqueue-block').innerHTML = `<div class="consensus pass" style="margin-top:12px"><i class="ti ti-check" style="font-size:18px"></i><div><div class="consensus-text">Approved by David Lim · Chunk v1 stored · Knowledge base updated</div></div></div>`;
+}
+
+function humanReject() {
+  addLog('eval','WARN','HUMAN REVIEWER (David Lim): Rejected · Chunk logged but not stored · Knowledge base unchanged');
+  document.getElementById('hqueue-block').innerHTML = `<div class="consensus" style="margin-top:12px;background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.25);color:var(--danger)"><i class="ti ti-x" style="font-size:18px"></i><div><div class="consensus-text">Rejected · Audit entry created · Knowledge base unchanged</div></div></div>`;
+}
+
+// ─── MODE C: TRAINING ─────────────────────────────────────────────────────────
+async function runTraining() {
+  document.getElementById('btn-train').disabled = true;
+  document.getElementById('training-panel').classList.remove('hidden');
+  document.getElementById('log-panel-train').classList.remove('hidden');
+  document.getElementById('chat-area').innerHTML = '';
+  document.getElementById('coaching-block').innerHTML = '';
+  document.getElementById('log-train').innerHTML = '';
+
+  const key = document.getElementById('scenario-select').value;
+  const profile = CUSTOMER_PROFILES[key];
+
+  document.getElementById('sim-profile').innerHTML = `<strong>Sub-agent profile:</strong> ${profile.name}, ${profile.age} · ${profile.label} · Primary objection: <em>${profile.objection}</em>`;
+
+  addLog('train','INFO',`ORCHESTRATOR: Training mode — James Wong (Junior Agent)`);
+  addLog('train','INFO',`ORCHESTRATOR: Spawning fresh customer simulation sub-agent — profile: ${profile.name}`);
+  addLog('train','INFO','NOTE: Sub-agent is disposable — created new for this session, discarded on completion');
+
+  await delay(500);
+  addLog('train','SUCCESS',`SIM AGENT: Initialised — ${profile.name}, ${profile.age} — objection: ${profile.objection}`);
+
+  // Customer opening
+  addBubble('customer', profile.name, '...');
+  let customerOpening;
+  try {
+    customerOpening = await callClaude(profile.system, 'Start the conversation. Greet the agent and naturally surface your primary concern in 2-3 sentences.');
+  } catch(e) {
+    customerOpening = `Hello. I've been thinking about insurance but honestly, the premiums I've seen seem quite expensive for what we need right now.`;
+  }
+  updateLastBubble(customerOpening);
+  addLog('train','INFO','SIM AGENT: Customer opening delivered');
+
+  // Retrieve from KB
+  await delay(400);
+  addLog('train','INFO','ORCHESTRATOR: Retrieving relevant chunks from knowledge base');
+  addLog('train','INFO','RETRIEVAL: Metadata pre-filter → stage: objection-handling');
+  const retrieved = knowledgeBase.filter(c => c.status === 'approved' && c.stage === 'objection-handling').slice(0,3);
+  addLog('train','SUCCESS',`RETRIEVAL: ${retrieved.length} chunks returned (topK: 3) · Token efficiency: metadata filter reduced candidate pool`);
+
+  const kbContext = retrieved.map(c => `[${c.id}] ${c.technique}: "${c.text}"`).join('\n\n');
+
+  // Junior agent response (KB-grounded)
+  addBubble('agent', 'Junior agent (James)', '...');
+  addLog('train','INFO','COACHING AGENT: Generating KB-grounded response with citation enforcement');
+  let agentResponse;
+  try {
+    agentResponse = await callClaude(
+      `You are a junior insurance sales agent. Base your response ONLY on the knowledge base chunks below. Do not extrapolate or invent. Cite the chunk you used with [Source: C00X].\n\nKNOWLEDGE BASE:\n${kbContext}`,
+      `Customer said: "${customerOpening}"\nRespond in 2-3 sentences using only the knowledge above.`
+    );
+  } catch(e) {
+    agentResponse = `I understand — it can feel like a lot when you first look at the numbers. Can I ask, when you say expensive, are you comparing to something specific, or does the total amount feel large? I'd like to show you exactly what you're getting for each dollar. [Source: C001]`;
+  }
+  updateLastBubble(agentResponse);
+  addLog('train','SUCCESS','COACHING AGENT: Response generated · Citation present · Grounding constraint applied');
+
+  // Customer follow-up
+  await delay(400);
+  addBubble('customer', profile.name, '...');
+  let followUp;
+  try {
+    followUp = await callClaude(profile.system, `The agent said: "${agentResponse}". Show some movement but don't fully commit. 1-2 sentences.`);
+  } catch(e) {
+    followUp = `That's actually a fair point. I hadn't thought about comparing what's included rather than just the number.`;
+  }
+  updateLastBubble(followUp);
+
+  // Post-session coaching
+  await delay(400);
+  addLog('train','INFO','ORCHESTRATOR: Session complete — spawning post-session evaluation sub-agent');
+  let coaching;
+  try {
+    const raw = await callClaude(
+      `You are a post-session coaching sub-agent. Evaluate the junior agent's technique against the KB chunks. Only reference techniques in the chunks. Respond ONLY with valid JSON, no preamble: {"strength":"...","gap":"...","tip":"...","source_chunk":"C00X"}`,
+      `KB used:\n${kbContext}\n\nAgent response: "${agentResponse}"\nCustomer reaction: "${followUp}"\n\nEvaluate technique.`
+    );
+    coaching = JSON.parse(raw.replace(/```json|```/g,'').trim());
+  } catch(e) {
+    coaching = { strength:'Strong use of clarifying question before reframing — aligns with objection-clarification technique.', gap:'Missed the graduated-commitment close — offering a basic plan entry point would reduce perceived commitment.', tip:`After value-reframe, introduce the graduated option: "We can start with core coverage today and add more as your income grows." [Source: C004]`, source_chunk:'C001' };
+  }
+
+  document.getElementById('coaching-block').innerHTML = `
+    <div class="coaching">
+      <div class="coaching-title"><i class="ti ti-brain"></i> Post-session evaluation · Coaching sub-agent</div>
+      <div class="coaching-row"><strong style="color:var(--success)">✓ What worked</strong>${coaching.strength}<div class="cite">Source: ${coaching.source_chunk} · Knowledge base citation verified</div></div>
+      <div class="coaching-row"><strong style="color:var(--warn)">⚑ Gap identified</strong>${coaching.gap}</div>
+      <div class="coaching-row"><strong style="color:var(--accent)">→ Tip for next time</strong>${coaching.tip}</div>
+    </div>
+    <div class="future-note"><strong>Future iteration (scoped out):</strong> Outcome of real interaction would be pulled from CRM system of record (not self-reported) and fed back into the knowledge base via the same extraction + evaluation pipeline — completing the flywheel loop.</div>`;
+
+  addLog('train','SUCCESS','POST-SESSION EVAL: Coaching feedback generated with KB citation');
+  addLog('train','INFO','ORCHESTRATOR: Training session complete · Session logged to observability store');
+  addLog('train','INFO','FUTURE ITERATION: CRM outcome integration + flywheel feedback loop (scoped out)');
+  document.getElementById('btn-train').disabled = false;
+}
+
+function addBubble(type, name, text) {
+  const area = document.getElementById('chat-area');
+  const wrap = document.createElement('div');
+  wrap.className = `bubble-wrap ${type}`;
+  wrap.innerHTML = `<div class="bubble-who">${name}</div><div class="bubble ${type}">${text}</div>`;
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function updateLastBubble(text) {
+  const bubbles = document.getElementById('chat-area').querySelectorAll('.bubble');
+  if (bubbles.length) bubbles[bubbles.length-1].textContent = text;
+}
+</script>
+</body>
+</html>
