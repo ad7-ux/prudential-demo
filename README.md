@@ -1,5 +1,5 @@
 # Prudential AI — Sales Knowledge Pipeline
-### Multi-Agent Prototype · Built by Ankan Das
+### Multi-Agent Prototype · Built by Ankan Dutta
 
 A working prototype of an orchestrator-driven multi-agent AI system that extracts tacit sales knowledge from top Prudential agents, validates it through multi-agent consensus evaluation, and makes it available to junior agents as an AI coaching tool.
 
