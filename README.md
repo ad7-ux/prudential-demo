@@ -84,6 +84,14 @@ prudential-demo/
 
 ## Key Design Decisions
 
+### Design Process
+1. WORKFLOW FIRST      — what needs to happen, in what order
+2. DATA LAYER          — what does the system know, where does it live
+3. AGENTS              — who does what job inside the system
+4. TOOLS & SKILLS      — what can each agent reach out and use
+5. HARNESS             — what coordinates all the agents together
+6. GUARDRAILS          — what stops it going wrong
+
 ### Why RAG, not fine-tuning?
 Fine-tuning modifies model weights — expensive ($10M+ at scale), slow to update, and impossible to audit. RAG stores knowledge externally and retrieves it at query time. Knowledge can be updated, versioned, and retired without touching the model. In a regulated industry, auditability is non-negotiable.
 
@@ -182,5 +190,4 @@ Mitigations:
 
 ---
 
-*Prototype built to demonstrate enterprise multi-agent architecture thinking.
-All data is synthetic. No real Prudential customer or agent data is used.*
+*All data is synthetic. No real customer or agent data is used.*
